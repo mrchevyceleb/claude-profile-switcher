@@ -17,7 +17,7 @@ Write-Host ""
 
 # Configuration
 $ProfilesDir = Join-Path $env:USERPROFILE ".claude-profiles"
-$ScriptUrl = "https://raw.githubusercontent.com/mtjohns/claude-profile-switcher/main/claude-profile.ps1"
+$ScriptUrl = "https://raw.githubusercontent.com/mrchevyceleb/claude-profile-switcher/main/claude-profile.ps1"
 $ScriptPath = Join-Path $ProfilesDir "claude-profile.ps1"
 
 # Step 1: Create profiles directory

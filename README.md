@@ -1,23 +1,42 @@
 # Claude Profile Switcher
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Platform: Windows](https://img.shields.io/badge/Platform-Windows-blue.svg)](https://www.microsoft.com/windows)
+[![PowerShell 5.1+](https://img.shields.io/badge/PowerShell-5.1%2B-blue.svg)](https://docs.microsoft.com/en-us/powershell/)
+
 **Easily switch between multiple Claude Code accounts (personal, Teams, work) on a single machine.**
 
-Claude Code only supports one logged-in account at a time. This tool lets you:
-- Save multiple accounts as profiles
-- Switch between them with a single command
-- Run multiple accounts **simultaneously** in separate terminals
+---
+
+## The Problem
+
+Claude Code only supports **one logged-in account at a time**. If you have both a personal account and a Teams/work account, you have to constantly log out and log back in. This is slow and frustrating.
+
+## The Solution
+
+This tool lets you:
+- **Save** multiple accounts as named profiles
+- **Switch** between them with a single command
+- **Run both simultaneously** in separate terminal windows
+
+---
 
 ## Quick Start
 
-### Installation
+### 1. Install (One Command)
 
-Run this in PowerShell:
+Open PowerShell and run:
 
 ```powershell
-irm https://raw.githubusercontent.com/mtjohns/claude-profile-switcher/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/mrchevyceleb/claude-profile-switcher/main/install.ps1 | iex
 ```
 
-Or manually:
+Then **restart PowerShell**.
+
+
+<details>
+<summary>Manual Installation (click to expand)</summary>
+
 1. Download `claude-profile.ps1`
 2. Save to `~/.claude-profiles/claude-profile.ps1`
 3. Add this to your PowerShell profile (`notepad $PROFILE`):
@@ -25,28 +44,45 @@ Or manually:
    function claude-profile { & "$env:USERPROFILE\.claude-profiles\claude-profile.ps1" @args }
    Set-Alias ccp claude-profile
    ```
+</details>
 
-### Setup Your Profiles
+### 2. Save Your Accounts as Profiles
+
+**Save your personal account:**
+1. Open Claude Code
+2. Make sure you're logged into your **personal** account (use `/login` if needed)
+3. Exit Claude Code
+4. In PowerShell, run:
+   ```powershell
+   ccp create personal
+   ```
+
+**Save your Teams/work account:**
+1. Open Claude Code
+2. Run `/login` and log into your **Teams/work** account
+3. Exit Claude Code
+4. In PowerShell, run:
+   ```powershell
+   ccp create teams
+   ```
+
+### 3. Switch Between Accounts
 
 ```powershell
-# Log into your personal account in Claude Code (/login), then:
-ccp create personal
-
-# Log into your Teams/work account in Claude Code (/login), then:
-ccp create teams
+ccp switch personal    # Switch to personal account
+ccp switch teams       # Switch to Teams account
 ```
 
-### Usage
+> **Important:** Restart Claude Code after switching for changes to take effect.
+
+### 4. Run Both Simultaneously (Optional)
 
 ```powershell
-# Switch accounts (restart Claude Code after)
-ccp switch personal
-ccp switch teams
-
-# Or run both simultaneously
 ccp launch personal    # Opens new terminal with personal account
 ccp launch teams       # Opens new terminal with Teams account
 ```
+
+Each runs in a completely isolated environment. First time requires a one-time login.
 
 ## Commands
 
