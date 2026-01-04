@@ -117,6 +117,16 @@ Claude Code stores credentials in `~/.claude/.credentials.json`. This tool:
 - PowerShell 5.1+
 - Claude Code installed
 
+## Tip: Quick Launch Shortcut
+
+Add this to your PowerShell profile (`notepad $PROFILE`):
+
+```powershell
+function cc { claude --dangerously-skip-permissions }
+```
+
+Now just type `cc` instead of the full command. (Use with caution - this auto-approves all permission prompts.)
+
 ## Important Notes
 
 - Run `ccp` commands in **PowerShell**, not inside Claude Code
