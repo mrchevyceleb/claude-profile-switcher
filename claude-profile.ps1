@@ -61,6 +61,40 @@ function Get-AllProfiles {
     return $profiles
 }
 
+function Get-TokenExpiry {
+    param([string]$CredFilePath)
+
+    if (-not (Test-Path $CredFilePath)) {
+        return $null
+    }
+
+    try {
+        $creds = Get-Content $CredFilePath -Raw | ConvertFrom-Json
+        if ($creds.claudeAiOauth -and $creds.claudeAiOauth.expiresAt) {
+            return $creds.claudeAiOauth.expiresAt
+        }
+    } catch {
+        return $null
+    }
+    return $null
+}
+
+function Test-TokenExpired {
+    param([long]$ExpiresAt)
+
+    $now = [long]((Get-Date).ToUniversalTime() - [datetime]'1970-01-01T00:00:00Z').TotalMilliseconds
+    return $now -gt $ExpiresAt
+}
+
+function Get-TimeUntilExpiry {
+    param([long]$ExpiresAt)
+
+    $now = [long]((Get-Date).ToUniversalTime() - [datetime]'1970-01-01T00:00:00Z').TotalMilliseconds
+    $diffMs = $ExpiresAt - $now
+    $diffHours = [math]::Round($diffMs / 3600000, 1)
+    return $diffHours
+}
+
 function Show-Help {
     Write-Color "`nClaude Code Profile Switcher" "Cyan"
     Write-Color "============================`n" "Cyan"
@@ -144,7 +178,29 @@ function Switch-Profile {
         return
     }
 
-    # Save current credentials to active profile first (if one exists)
+    # Check token expiration
+    $expiresAt = Get-TokenExpiry -CredFilePath $profileCredFile
+    if ($expiresAt) {
+        if (Test-TokenExpired -ExpiresAt $expiresAt) {
+            Write-Color "`nWARNING: Token for profile '$Name' has EXPIRED!" "Red"
+            Write-Color "The switch will likely fail. Please update this profile:" "Yellow"
+            Write-Host "  1. Log into the $Name account in Claude Code (/login)"
+            Write-Host "  2. Run: ccp create $Name"
+            Write-Host ""
+            $continue = Read-Host "Continue anyway? (y/N)"
+            if ($continue -ne 'y' -and $continue -ne 'Y') {
+                Write-Color "Switch cancelled." "Yellow"
+                return
+            }
+        } else {
+            $hoursLeft = Get-TimeUntilExpiry -ExpiresAt $expiresAt
+            if ($hoursLeft -lt 2) {
+                Write-Color "Note: Token expires in $hoursLeft hours" "Yellow"
+            }
+        }
+    }
+
+    # Save current credentials to active profile first (preserves any token refreshes)
     $currentProfile = Get-ActiveProfile
     if ($currentProfile -and (Test-Path $CredentialsFile)) {
         $currentProfileDir = Join-Path $ProfilesDir $currentProfile
@@ -178,10 +234,33 @@ function Show-Profiles {
     Write-Host "---------------------"
 
     foreach ($profile in $profiles) {
+        $profileDir = Join-Path $ProfilesDir $profile
+        $profileCredFile = Join-Path $profileDir ".credentials.json"
+        $expiresAt = Get-TokenExpiry -CredFilePath $profileCredFile
+
+        $status = ""
+        $color = "White"
+
+        if ($expiresAt) {
+            if (Test-TokenExpired -ExpiresAt $expiresAt) {
+                $status = " [EXPIRED]"
+                $color = "Red"
+            } else {
+                $hoursLeft = Get-TimeUntilExpiry -ExpiresAt $expiresAt
+                if ($hoursLeft -lt 2) {
+                    $status = " [expires in ${hoursLeft}h]"
+                    $color = "Yellow"
+                } elseif ($hoursLeft -lt 12) {
+                    $status = " [${hoursLeft}h left]"
+                    $color = "White"
+                }
+            }
+        }
+
         if ($profile -eq $active) {
-            Write-Color "  * $profile (active)" "Green"
+            Write-Color "  * $profile (active)$status" $(if ($color -eq "Red") { "Red" } else { "Green" })
         } else {
-            Write-Host "    $profile"
+            Write-Color "    $profile$status" $color
         }
     }
     Write-Host ""
