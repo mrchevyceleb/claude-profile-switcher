@@ -48,23 +48,30 @@ Then **restart PowerShell**.
 
 ### 2. Save Your Accounts as Profiles
 
+> **CRITICAL: Close ALL Claude Code sessions before setup!**
+>
+> If you have Claude Code open in multiple places (desktop app, VS Code, Obsidian, other terminals), **close them all first**. Multiple sessions share the same credentials file - if one session refreshes its token while you're setting up, it will overwrite your profiles with the wrong account.
+
 **Save your personal account:**
-1. Open Claude Code
-2. Make sure you're logged into your **personal** account (use `/login` if needed)
-3. Exit Claude Code
-4. In PowerShell, run:
+1. **Close ALL Claude Code sessions everywhere**
+2. Open ONE terminal and run `claude`
+3. Make sure you're logged into your **personal** account (use `/login` if needed)
+4. Exit Claude Code
+5. In PowerShell, run:
    ```powershell
    ccp create personal
    ```
 
 **Save your Teams/work account:**
-1. Open Claude Code
-2. Run `/login` and log into your **Teams/work** account
+1. Open Claude Code (same terminal)
+2. Run `/logout`, then `/login` and log into your **Teams/work** account
 3. Exit Claude Code
 4. In PowerShell, run:
    ```powershell
    ccp create teams
    ```
+
+5. Verify setup with `ccp list` - both profiles should show valid tokens (not `[EXPIRED]`)
 
 ### 3. Switch Between Accounts
 
@@ -113,12 +120,36 @@ Claude Code stores credentials in `~/.claude/.credentials.json`. This tool:
 ## Important Notes
 
 - Run `ccp` commands in **PowerShell**, not inside Claude Code
-- After `switch`, restart Claude Code for changes to take effect
+- After `switch`, **close and restart** Claude Code for changes to take effect
 - First time using `launch` for each profile requires a one-time login
+- **Tokens expire after ~24 hours** - if `ccp list` shows `[EXPIRED]`, re-save the profile
 
 ## Troubleshooting
 
-See the [detailed beginner's guide](docs/beginners-guide.md) for step-by-step instructions and troubleshooting.
+### "Switch doesn't work - stays on the same account"
+
+**Cause 1: Multiple Claude Code sessions running**
+- Close ALL Claude Code sessions before switching
+- Switch with `ccp switch <name>`
+- Then reopen Claude Code
+
+**Cause 2: Expired tokens**
+- Run `ccp list` - if you see `[EXPIRED]`, the stored tokens are dead
+- Log into that account fresh and run `ccp create <name>` to update it
+
+**Cause 3: Setup was done with multiple sessions open**
+- If other Claude Code sessions were running during setup, they may have overwritten your profiles
+- Close everything and redo the setup from scratch
+
+### "Both profiles seem to use the same account"
+
+This happens when profiles are created while other Claude Code sessions are running. The other session refreshes its token and overwrites the credentials file. Close everything and redo setup.
+
+### Using multiple accounts simultaneously
+
+Use `ccp launch <name>` instead of `ccp switch`. This opens an isolated terminal with a separate HOME directory, so credentials don't conflict.
+
+See the [detailed beginner's guide](docs/beginners-guide.md) for more help.
 
 ## License
 
