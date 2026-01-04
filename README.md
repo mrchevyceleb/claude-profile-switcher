@@ -18,6 +18,7 @@ This tool lets you:
 - **Save** multiple accounts as named profiles
 - **Switch** between them with a single command
 - **Run both simultaneously** in separate terminal windows
+- **Verify** your current state with detailed account info (v1.1+)
 
 ---
 
@@ -82,7 +83,20 @@ ccp switch teams       # Switch to Teams account
 
 > **Important:** Restart Claude Code after switching for changes to take effect.
 
-### 4. Run Both Simultaneously (Optional)
+### 4. Verify Your Setup (NEW in v1.1)
+
+```powershell
+ccp verify    # Show detailed account info and verify credentials match
+```
+
+This command shows:
+- Account type (Claude Max, Claude Team, etc.)
+- Token ID (unique identifier for each account)
+- Token expiration status
+- File hash verification
+- Whether active credentials match the selected profile
+
+### 5. Run Both Simultaneously (Optional)
 
 ```powershell
 ccp launch personal    # Opens new terminal with personal account
@@ -95,8 +109,9 @@ Each runs in a completely isolated environment. First time requires a one-time l
 
 | Command | Description |
 |---------|-------------|
-| `ccp list` | Show all profiles (* = active) |
-| `ccp switch <name>` | Switch to a profile |
+| `ccp list` | Show all profiles with account type (* = active) |
+| `ccp switch <name>` | Switch to a profile (with before/after verification) |
+| `ccp verify` | **NEW** - Verify current state and show detailed account info |
 | `ccp launch <name>` | Open profile in new isolated terminal |
 | `ccp create <name>` | Save current Claude login as profile |
 | `ccp current` | Show active profile |
@@ -108,8 +123,18 @@ Each runs in a completely isolated environment. First time requires a one-time l
 Claude Code stores credentials in `~/.claude/.credentials.json`. This tool:
 
 1. **Profiles**: Saves copies of credentials to `~/.claude-profiles/<name>/`
-2. **Switch**: Copies the selected profile's credentials into place
+2. **Switch**: Copies the selected profile's credentials into place with full verification
 3. **Launch**: Creates isolated environments with separate HOME directories for true simultaneous use
+
+## What's New in v1.1
+
+- **`verify` command**: Check your current state with detailed account info
+- **Account type display**: Shows Claude Max, Claude Team, Pro, or Free for each profile
+- **Token ID tracking**: Unique identifier (last 8 chars of refresh token) to distinguish accounts
+- **Before/After comparison**: Switch command shows detailed state before and after
+- **File hash verification**: Confirms credentials were copied correctly
+- **Debug logging**: Timestamped logs for troubleshooting
+- **BOM fix**: Handles UTF-8 BOM characters in active profile marker
 
 ## Requirements
 
@@ -133,23 +158,38 @@ Now just type `cc` instead of the full command. (Use with caution - this auto-ap
 - After `switch`, **close and restart** Claude Code for changes to take effect
 - First time using `launch` for each profile requires a one-time login
 - **Tokens expire after ~24 hours** - if `ccp list` shows `[EXPIRED]`, re-save the profile
+- Use `ccp verify` to check if credentials match the selected profile
 
 ## Troubleshooting
 
 ### "Switch doesn't work - stays on the same account"
 
-**Cause 1: Multiple Claude Code sessions running**
+**Cause 1: Claude Code caches credentials in memory**
+- The switch IS working at the file level
+- Claude Code reads credentials at startup and keeps them in memory
+- You MUST restart Claude Code after switching
+- Run `/exit` in Claude, then start a new session
+
+**Cause 2: Multiple Claude Code sessions running**
 - Close ALL Claude Code sessions before switching
 - Switch with `ccp switch <name>`
 - Then reopen Claude Code
 
-**Cause 2: Expired tokens**
+**Cause 3: Expired tokens**
 - Run `ccp list` - if you see `[EXPIRED]`, the stored tokens are dead
 - Log into that account fresh and run `ccp create <name>` to update it
 
-**Cause 3: Setup was done with multiple sessions open**
+**Cause 4: Setup was done with multiple sessions open**
 - If other Claude Code sessions were running during setup, they may have overwritten your profiles
 - Close everything and redo the setup from scratch
+
+### "How do I know which account I'm on?"
+
+Run `ccp verify` - it shows:
+- The active profile marker
+- The account type (Claude Max vs Claude Team)
+- Whether the active credentials match the selected profile
+- All profiles with their account types and token IDs
 
 ### "Both profiles seem to use the same account"
 
