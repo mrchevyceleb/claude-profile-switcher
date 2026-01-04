@@ -95,6 +95,60 @@ function Get-TimeUntilExpiry {
     return $diffHours
 }
 
+function Invoke-TokenRefresh {
+    param([string]$CredFilePath)
+
+    if (-not (Test-Path $CredFilePath)) {
+        return $false
+    }
+
+    try {
+        $creds = Get-Content $CredFilePath -Raw | ConvertFrom-Json
+        $refreshToken = $creds.claudeAiOauth.refreshToken
+
+        if (-not $refreshToken) {
+            Write-Color "No refresh token available" "Red"
+            return $false
+        }
+
+        Write-Color "Refreshing token..." "Yellow"
+
+        # Call Claude's OAuth refresh endpoint
+        $body = @{
+            grant_type = "refresh_token"
+            refresh_token = $refreshToken
+        }
+
+        $response = Invoke-RestMethod -Uri "https://console.anthropic.com/v1/oauth/token" `
+            -Method Post `
+            -ContentType "application/x-www-form-urlencoded" `
+            -Body $body `
+            -ErrorAction Stop
+
+        if ($response.access_token) {
+            # Update credentials with new tokens
+            $creds.claudeAiOauth.accessToken = $response.access_token
+            if ($response.refresh_token) {
+                $creds.claudeAiOauth.refreshToken = $response.refresh_token
+            }
+            # Calculate new expiry (response.expires_in is in seconds)
+            $now = [long]((Get-Date).ToUniversalTime() - [datetime]'1970-01-01T00:00:00Z').TotalMilliseconds
+            $creds.claudeAiOauth.expiresAt = $now + ($response.expires_in * 1000)
+
+            # Save updated credentials
+            $creds | ConvertTo-Json -Depth 10 | Set-Content $CredFilePath -Encoding UTF8
+
+            Write-Color "Token refreshed successfully!" "Green"
+            return $true
+        }
+    } catch {
+        Write-Color "Token refresh failed: $($_.Exception.Message)" "Red"
+        return $false
+    }
+
+    return $false
+}
+
 function Show-Help {
     Write-Color "`nClaude Code Profile Switcher" "Cyan"
     Write-Color "============================`n" "Cyan"
@@ -200,13 +254,31 @@ function Switch-Profile {
         }
     }
 
-    # Save current credentials to active profile first (preserves any token refreshes)
+    # Save current credentials to active profile ONLY if they match (same refresh token)
+    # This prevents corruption when user runs /login outside the profile switcher
     $currentProfile = Get-ActiveProfile
     if ($currentProfile -and (Test-Path $CredentialsFile)) {
         $currentProfileDir = Join-Path $ProfilesDir $currentProfile
-        if (Test-Path $currentProfileDir) {
-            $currentCredFile = Join-Path $currentProfileDir ".credentials.json"
-            Copy-Item -Path $CredentialsFile -Destination $currentCredFile -Force
+        $currentCredFile = Join-Path $currentProfileDir ".credentials.json"
+        if (Test-Path $currentCredFile) {
+            try {
+                $activeCreds = Get-Content $CredentialsFile -Raw | ConvertFrom-Json
+                $profileCreds = Get-Content $currentCredFile -Raw | ConvertFrom-Json
+
+                # Only save back if refresh tokens match (same account)
+                $activeRefresh = $activeCreds.claudeAiOauth.refreshToken
+                $profileRefresh = $profileCreds.claudeAiOauth.refreshToken
+
+                if ($activeRefresh -and $profileRefresh -and $activeRefresh -eq $profileRefresh) {
+                    # Same account - safe to save refreshed tokens back
+                    Copy-Item -Path $CredentialsFile -Destination $currentCredFile -Force
+                } else {
+                    Write-Color "Note: Active credentials don't match '$currentProfile' profile (different account). Not saving back." "Yellow"
+                }
+            } catch {
+                # If we can't parse credentials, skip the save-back
+                Write-Color "Warning: Could not verify credentials, skipping save-back." "Yellow"
+            }
         }
     }
 
